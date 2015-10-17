@@ -255,6 +255,439 @@ if (Meteor.isClient) {
     test.equal(comment.replies, []);
   });
 
+  Tinytest.add('Comments - Hooks - before - add', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.add('Comments - Hooks - before - add - stopAction', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          return false;
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').count();
+    test.equal(comments, 0);
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - add', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+
+
+
+  /*Tinytest.add('Comments - Hooks - before - edit', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        edit: function(doc){
+          doc.content =  "before Edit - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('replyDoc', 'Awesome stuff');
+
+    var comment = Comments.get('replyDoc').fetch()[0];
+
+    Comments.edit(comment._id, 'Not so awesome');
+
+    comment = Comments.get('replyDoc').fetch()[0];
+
+    test.equal(comment.content, 'before Edit - Not so awesome');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - edit', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        edit: function(error, result){
+          test.equal(this.doc.content, 'Not so awesome');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'replyDoc');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('replyDoc', 'Awesome stuff');
+
+    var comment = Comments.get('replyDoc').fetch()[0];
+
+    Comments.edit(comment._id, 'Not so awesome');
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - remove', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    test.equal('1','0')
+    next();
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - remove', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+    test.equal('1','0')
+    next();
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - like', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    test.equal('1','0')
+    next();
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - like', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+    test.equal('1','0')
+    next();
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - Replies - add', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    test.equal('1','0')
+    next();
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - Replies - add', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+    test.equal('1','0')
+    next();
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - Replies - edit', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    test.equal('1','0')
+    next();
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - Replies - edit', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+    test.equal('1','0')
+    next();
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - Replies - like', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    test.equal('1','0')
+    next();
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - Replies - like', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+    test.equal('1','0')
+    next();
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - Replies - remove', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    test.equal('1','0')
+    next();
+
+    Comments.clearHooks();
+
+    Comments.addHook({
+      before: {
+        add: function(doc){
+          doc.content =  "before Add - " + doc.content;
+
+          this.result(doc);
+        }
+      }
+    });
+
+    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('fakeDoc1', 'I did not like it');
+    Comments.add('fakeDoc1', '');
+
+    var comments = Comments.get('fakeDoc1').fetch();
+    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[0].referenceId, 'fakeDoc1');
+    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].userId, Meteor.userId());
+    test.equal(comments[1].referenceId, 'fakeDoc1');
+  });
+
+  Tinytest.addAsync('Comments - Hooks - after - Replies - remove', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+    test.equal('1','0')
+    next();
+    Comments.clearHooks();
+
+    Comments.addHook({
+      after: {
+        add: function(error, result){
+          test.equal(this.doc.content, 'I liked this');
+          test.equal(this.doc.userId, Meteor.userId());
+          test.equal(this.doc.referenceId, 'fakeDoc1');
+          next();
+        }
+      }
+    }, true);
+
+    Comments.add('fakeDoc1', 'I liked this');
+
+  });
+*/
   Tinytest.add('Comments - changeSchema', function (test) {
     Comments.changeSchema(function (currentSchema) {
       currentSchema.file = { type: Object, max: 15 };
