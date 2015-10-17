@@ -283,7 +283,7 @@ if (Meteor.isClient) {
     test.equal(comments[1].referenceId, 'fakeDoc1');
   });
 
-  Tinytest.add('Comments - Hooks - before - add - stopAction', function (test) {
+  Tinytest.add('Comments - Hooks - before - add - cancelAction', function (test) {
     Meteor.call('removeGeneratedDocs', Meteor.userId());
 
     Comments.clearHooks();
@@ -324,9 +324,7 @@ if (Meteor.isClient) {
 
   });
 
-
-
-  /*Tinytest.add('Comments - Hooks - before - edit', function (test) {
+  Tinytest.add('Comments - Hooks - before - edit', function (test) {
     Meteor.call('removeGeneratedDocs', Meteor.userId());
 
     Comments.clearHooks();
@@ -376,20 +374,15 @@ if (Meteor.isClient) {
 
   });
 
-  Tinytest.add('Comments - Hooks - before - remove', function (test) {
+  Tinytest.add('Comments - Hooks - before - edit - cancelAction', function (test) {
     Meteor.call('removeGeneratedDocs', Meteor.userId());
-
-    test.equal('1','0')
-    next();
 
     Comments.clearHooks();
 
     Comments.addHook({
       before: {
-        add: function(doc){
-          doc.content =  "before Add - " + doc.content;
-
-          this.result(doc);
+        edit: function(doc){
+          return false;
         }
       }
     });
@@ -399,36 +392,131 @@ if (Meteor.isClient) {
     Comments.add('fakeDoc1', '');
 
     var comments = Comments.get('fakeDoc1').fetch();
-    test.equal(comments[0].content, 'before Add - I did not like it');
+    test.equal(comments.length, 2);
+    test.equal(comments[0].content, 'I did not like it');
     test.equal(comments[0].userId, Meteor.userId());
     test.equal(comments[0].referenceId, 'fakeDoc1');
-    test.equal(comments[1].content, 'before Add - I liked this');
+    test.equal(comments[1].content, 'I liked this');
     test.equal(comments[1].userId, Meteor.userId());
     test.equal(comments[1].referenceId, 'fakeDoc1');
   });
 
-  Tinytest.addAsync('Comments - Hooks - after - remove', function (test, next) {
+  Tinytest.add('Comments - Hooks - before - remove', function (test) {
     Meteor.call('removeGeneratedDocs', Meteor.userId());
-    test.equal('1','0')
-    next();
+
     Comments.clearHooks();
 
+    var commentsRemoved = [];
+    var commentsRemovedHook = [];
+
     Comments.addHook({
-      after: {
-        add: function(error, result){
-          test.equal(this.doc.content, 'I liked this');
-          test.equal(this.doc.userId, Meteor.userId());
-          test.equal(this.doc.referenceId, 'fakeDoc1');
-          next();
+      before: {
+        remove: function(doc){
+          commentsRemovedHook.push(doc._id);
         }
       }
-    }, true);
+    });
 
-    Comments.add('fakeDoc1', 'I liked this');
+    Comments.add('othersDoc', 'I like this, its my comment');
+
+    var comments = Comments.get('othersDoc').fetch();
+
+    test.equal(Comments.get('othersDoc').count(), 2);
+    test.equal(comments[0].content, 'I like this, its my comment');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[1].userId, 'someBodyElse');
+
+    commentsRemoved.push(comments[1]._id);
+    Comments.remove(comments[1]._id);
+
+    comments = Comments.get('othersDoc').fetch();
+
+    test.equal(Comments.get('othersDoc').count(), 2);
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[1].userId, 'someBodyElse');
+
+    commentsRemoved.push(comments[0]._id);
+    Comments.remove(comments[0]._id);
+
+    comments = Comments.get('othersDoc').fetch();
+
+    test.equal(Comments.get('othersDoc').count(), 1);
+    test.equal(comments[0].userId, 'someBodyElse');
+
+    test.length(commentsRemovedHook, commentsRemoved.length);
+    var diff = _.difference(commentsRemoved, commentsRemovedHook);
+    test.length(diff, 0);
 
   });
 
-  Tinytest.add('Comments - Hooks - before - like', function (test) {
+  Tinytest.addAsync('Comments - Hooks - after - remove', function (test, next) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    var commentsRemoved = [];
+    var commentsRemovedHook = [];
+
+    Comments.addHook({
+      after: {
+        remove: function(error, result){
+          test.isUndefined(this.doc);
+          next();
+        }
+      }
+    });
+
+    Comments.add('othersDoc', 'I like this, its my comment');
+
+    var comments = Comments.get('othersDoc').fetch();
+
+    commentsRemoved.push(comments[0]._id);
+    Comments.remove(comments[0]._id);
+
+  });
+
+  Tinytest.add('Comments - Hooks - before - remove - cancelAction', function (test) {
+    Meteor.call('removeGeneratedDocs', Meteor.userId());
+
+    Comments.clearHooks();
+
+    var commentsRemoved = [];
+    var commentsRemovedHook = [];
+
+    Comments.addHook({
+      before: {
+        remove: function(doc){
+          return false;
+        }
+      }
+    });
+
+    Comments.add('othersDoc', 'I like this, its my comment');
+
+    var comments = Comments.get('othersDoc').fetch();
+
+    test.equal(Comments.get('othersDoc').count(), 2);
+    test.equal(comments[0].content, 'I like this, its my comment');
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[1].userId, 'someBodyElse');
+
+    Comments.remove(comments[1]._id);
+
+    comments = Comments.get('othersDoc').fetch();
+
+    test.equal(Comments.get('othersDoc').count(), 2);
+    test.equal(comments[0].userId, Meteor.userId());
+    test.equal(comments[1].userId, 'someBodyElse');
+
+    commentsRemoved.push(comments[0]._id);
+    Comments.remove(comments[0]._id);
+
+    comments = Comments.get('othersDoc').fetch();
+    test.equal(Comments.get('othersDoc').count(), 2);
+
+  });
+
+  /*Tinytest.add('Comments - Hooks - before - like', function (test) {
     Meteor.call('removeGeneratedDocs', Meteor.userId());
 
     test.equal('1','0')

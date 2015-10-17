@@ -30,7 +30,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'accounts-password']);
+  api.use(['tinytest', 'accounts-password', 'underscore']);
   api.use('arkham:comments-ui');
 
   api.addFiles('tests/api-tests.js');
